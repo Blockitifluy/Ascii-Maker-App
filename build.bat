@@ -1,4 +1,4 @@
-
+@echo off
 
 REM This script builds the project and copies the output to the specified directories.
 REM It also copies the patterns.json file to the server directory.
