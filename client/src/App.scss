@@ -1,0 +1,43 @@
+$orange-peel: #ff9f1cff;
+$hunyadi-yellow: #ffbf69ff;
+$white: #ffffffff;
+$mint-green: #cbf3f0ff;
+$light-sea-green: #2ec4b6ff;
+
+#title {
+	background-color: $light-sea-green;
+	color: $white;
+	text-align: center;
+	padding: 1rem 0;
+	font-size: 3rem;
+	margin: 0;
+}
+
+#content {
+	margin: 2rem auto 0 auto;
+	width: 32rem;
+	padding: 2rem;
+}
+
+#source-image {
+	width: 100%;
+	min-height: 16rem;
+	border: $orange-peel 2px solid;
+	user-select: none;
+}
+
+#inputs {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+
+	.convert {
+		background-color: $orange-peel;
+		border-radius: 0.25rem;
+		width: 16rem;
+		border: none;
+		padding: 6px;
+		color: $white;
+		margin: auto;
+	}
+}
