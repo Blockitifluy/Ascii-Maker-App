@@ -37,6 +37,12 @@ Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
 npm install # or pnpm install or yarn install
 ```
 
+## Example
+
+| Orginal Image           | Ascii File                        |
+| ----------------------- | --------------------------------- |
+| ![cat](example/cat.jpg) | ![cat result](example/result.png) |
+
 ## Deployment
 
 Learn more about deploying your application with the [documentations](https://vite.dev/guide/static-deploy.html)
