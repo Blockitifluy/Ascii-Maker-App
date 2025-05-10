@@ -1,25 +1,27 @@
-import "./App.scss";
+import { Component } from "solid-js";
+import Header from "./components/header";
+import Inputs, { InputContext } from "./components/inputs";
+import "./app.scss";
 
-function App() {
+const App: Component = () => {
 	return (
-		<>
-			<h1 id='title'>Ascii Maker</h1>
+		<InputContext>
+			<Header />
+
 			<div id='content'>
 				<p>
 					An easy way to convert any image into ascii art. Quick, Easy, No
 					payment ever!
 				</p>
+
 				<img id='source-image' />
 
-				<div id='inputs'>
-					<input type='file' />
-					<button class='convert'>Convert</button>
-				</div>
+				<Inputs />
 
 				<sub>By Blockitifluy</sub>
 			</div>
-		</>
+		</InputContext>
 	);
-}
+};
 
 export default App;

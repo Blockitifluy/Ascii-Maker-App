@@ -8,14 +8,16 @@ REM Make sure to run this script from the root of the project directory.
 
 REM Set the path to the project directory
 
-dotnet build
+dotnet build --output build
 if %errorlevel% neq 0 (
-	echo "Build failed"
+	echo Build failed
 	exit /b %errorlevel%
 )
 
-echo "build finished"
+echo build finished
 
-xcopy dist bin\Debug\net9.0\dist /E /I /Y
+move client\dist bin\Debug\net9.0\dist 
+
+xcopy dist174 bin\Debug\net9.0\dist /E /I /Y
 xcopy server\picture\patterns.json bin\Debug\net9.0\server\picture\patterns.json /I /Y
-echo "copied dist and patterns.json"
+echo copied dist and patterns.json

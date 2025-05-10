@@ -1,12 +1,17 @@
 $orange-peel: #ff9f1cff;
 $hunyadi-yellow: #ffbf69ff;
 $white: #ffffffff;
+$text: #333333ff;
 $mint-green: #cbf3f0ff;
 $light-sea-green: #2ec4b6ff;
+$small-rounded: 0.5rem;
+
+body {
+	color: $text;
+}
 
 #title {
 	background-color: $light-sea-green;
-	color: $white;
 	text-align: center;
 	padding: 1rem 0;
 	font-size: 3rem;
@@ -33,11 +38,46 @@ $light-sea-green: #2ec4b6ff;
 
 	.convert {
 		background-color: $orange-peel;
-		border-radius: 0.25rem;
-		width: 16rem;
+		border-radius: $small-rounded;
 		border: none;
-		padding: 6px;
+		font-weight: 500;
+		padding: 6px 12px;
 		color: $white;
 		margin: auto;
+		transition: background-color 0.5s ease;
+
+		&:hover {
+			background-color: $hunyadi-yellow;
+			cursor: pointer;
+		}
+		&:active {
+			background-color: $orange-peel;
+			cursor: pointer;
+		}
+	}
+}
+
+input[type="file"]#image-input {
+	display: none;
+}
+
+label[for="image-input"] {
+	background-color: $light-sea-green;
+	color: $white;
+	font-weight: 500;
+	border-radius: $small-rounded;
+	padding: 6px 12px;
+	cursor: pointer;
+	transition: background-color, color 0.5s ease;
+
+	&:hover {
+		background-color: $hunyadi-yellow;
+		color: $text;
+		cursor: pointer;
+	}
+	&:active {
+		background-color: $hunyadi-yellow;
+		color: $text;
+		cursor: pointer;
 	}
 }

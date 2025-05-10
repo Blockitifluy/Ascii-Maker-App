@@ -7,13 +7,13 @@ This is the contination of the [PNG-to-Plain-Ascii](https://github.com/Blockitif
 Run the build.bat on the root directory, to compile both the server and the client.
 
 ```bat
-./build
+npm run build --prefix client
 ```
 
 and
 
 ```bat
-npm run build
+./build
 ```
 
 You can see changes on [dist](dist/) and `bin/Debug/net{VERSION HERE}`.
