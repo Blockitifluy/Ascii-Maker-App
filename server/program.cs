@@ -19,9 +19,12 @@ public static class Program
 		using FileStream image = new(ExamplePicture, FileMode.Open);
 		Pattern pattern = ImageToAscii.PatternList[DefaultPattern];
 
+		byte[] b = new byte[image.Length];
+		image.Write(b, 0, b.Length);
+
 		try
 		{
-			string ascii = ImageToAscii.Load(image, pattern);
+			string ascii = ImageToAscii.Load(b, pattern);
 
 			using FileStream imageResult = new(ExampleResult, FileMode.Create);
 			byte[] asciiBytes = Encoding.UTF8.GetBytes(ascii);
@@ -33,6 +36,7 @@ public static class Program
 		}
 	}
 
+	public static string LogPath = "log/server.log";
 	private static AsciiMakerServer _HttpServer;
 	public static AsciiMakerServer HttpServer => _HttpServer;
 
@@ -40,6 +44,8 @@ public static class Program
 
 	public static int Main(string[] args)
 	{
+		// TODO - Add proper log system
+		File.WriteAllText(LogPath, "");
 		Console.WriteLine("Running AsciiMaker server!");
 
 		ImageToAscii.LoadPatterns();
@@ -54,7 +60,6 @@ public static class Program
 				_HttpServer = new AsciiMakerServer(DefaultPort);
 				Console.WriteLine($"> Initised http server on {DefaultPort}");
 				_HttpServer.Start();
-
 				break;
 		}
 

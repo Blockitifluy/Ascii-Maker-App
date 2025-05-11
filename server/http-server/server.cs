@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -137,6 +138,8 @@ public sealed partial class AsciiMakerServer
 		return false;
 	}
 
+	public static string NotFoundMessage = "404 PAGE NOT FOUND";
+
 	/// <summary>
 	/// Handles incoming HTTP requests by matching the requested URL to a registered handler.
 	/// If no handler is found for the requested URL, responds with a 404 status and a "PAGE NOT FOUND" message.
@@ -149,7 +152,7 @@ public sealed partial class AsciiMakerServer
 
 		if (!TryGetRequestToHandler(context.Request, out HandlerData handler))
 		{
-			byte[] notFound = Encoding.UTF8.GetBytes("404 PAGE NOT FOUND");
+			byte[] notFound = Encoding.UTF8.GetBytes(NotFoundMessage);
 
 			response.StatusCode = (int)HttpStatusCode.NotFound;
 			response.ContentType = "text/plain";
@@ -163,8 +166,10 @@ public sealed partial class AsciiMakerServer
 	// 24 Megabytes
 	public const long MaxRequestBodyLength = 1024 * 1024 * 24;
 
-	// 512 Kilobytes
+	// 512 Bytes
 	public const long MaxRequestURLLength = 512;
+
+	public static string ErrorMessage = "Error when processing request. Please try again later";
 
 	private void Loop()
 	{
@@ -189,15 +194,31 @@ public sealed partial class AsciiMakerServer
 
 		Console.WriteLine($"> Recieved request ({localPath})");
 
+		Stopwatch timer = new();
+		timer.Start();
+
 		try
 		{
 			HandleURLRequest(context);
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine(ex);
-			response.Abort();
+			Console.WriteLine($"\tServer has expierenced an error while handling request, see {Program.LogPath} more info!");
+
+			File.AppendAllText(Program.LogPath, "\n" + ex);
+
+			byte[] errorMsg = Encoding.UTF8.GetBytes(ErrorMessage);
+
+			response.ContentLength64 = errorMsg.Length;
+			response.StatusCode = (int)HttpStatusCode.InternalServerError;
+			response.OutputStream.Write(errorMsg, 0, errorMsg.Length);
+			response.Close();
 			return;
+		}
+		finally
+		{
+			timer.Stop();
+			Console.WriteLine($"\tRequest took {timer.ElapsedMilliseconds}ms");
 		}
 
 		Console.WriteLine($"\tStatus Code: {response.StatusCode}.");

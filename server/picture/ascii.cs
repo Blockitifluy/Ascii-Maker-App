@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace ImageToAscii.Picture;
@@ -61,14 +62,14 @@ static class ImageToAscii
 		return CharNotFound;
 	}
 
-	public static string Load(Stream imageStream, Pattern pattern)
+	public static string Load(byte[] binImage, Pattern pattern)
 	{
 		if (!CanProcessImage(out var eCanProcess))
 		{
 			throw new Exception($"Can't process image {eCanProcess}");
 		}
 
-		using var image = Image.Load<PixelType>(imageStream);
+		using var image = Image.Load<PixelType>(binImage);
 
 		string imageAscii = "";
 

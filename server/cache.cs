@@ -1,35 +1,33 @@
 namespace ImageToAscii.Helper;
 
-public class Cache<TKey, TValue>
+public class Cache<K, V>
 {
-	private readonly Dictionary<TKey, CacheItem<TValue>> _cache = new Dictionary<TKey, CacheItem<TValue>>();
+	private readonly Dictionary<K, CacheItem<V>> _cache = new();
 
-	public void Store(TKey key, TValue value, TimeSpan expiresAfter)
+	public void Store(K key, V value, TimeSpan expiresAfter)
 	{
-		_cache[key] = new CacheItem<TValue>(value, expiresAfter);
+		_cache[key] = new CacheItem<V>(value, expiresAfter);
 	}
 
-	public TValue Get(TKey key)
+	public V Get(K key)
 	{
-		if (!_cache.ContainsKey(key)) return default(TValue);
+		if (!_cache.ContainsKey(key))
+			return default(V);
+
 		var cached = _cache[key];
 		if (DateTimeOffset.Now - cached.Created >= cached.ExpiresAfter)
 		{
 			_cache.Remove(key);
-			return default(TValue);
+			return default(V);
 		}
+
 		return cached.Value;
 	}
 }
 
-public class CacheItem<T>
+public class CacheItem<T>(T value, TimeSpan expiresAfter)
 {
-	public CacheItem(T value, TimeSpan expiresAfter)
-	{
-		Value = value;
-		ExpiresAfter = expiresAfter;
-	}
-	public T Value { get; }
+	public T Value { get; } = value;
 	internal DateTimeOffset Created { get; } = DateTimeOffset.Now;
-	internal TimeSpan ExpiresAfter { get; }
+	internal TimeSpan ExpiresAfter { get; } = expiresAfter;
 }

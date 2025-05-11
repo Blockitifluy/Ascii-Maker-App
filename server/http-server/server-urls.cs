@@ -1,8 +1,11 @@
 namespace ImageToAscii.Server;
+
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Web;
 using ImageToAscii.Helper;
+using ImageToAscii.Picture;
 using MimeTypes;
 using SixLabors.ImageSharp;
 
@@ -65,6 +68,9 @@ public partial class AsciiMakerServer
 
 	public static TimeSpan TempImageTimeSpan = new(1, 0, 0);
 
+	// Can store 4 Megabytes
+	const int MaxImageBufferSize = 1024 * 1024 * 4;
+
 	[UrlHandler("/api/image", ["POST", "GET"])]
 	public void HandleImage(HttpListenerContext context)
 	{
@@ -88,8 +94,6 @@ public partial class AsciiMakerServer
 		var response = context.Response;
 		var request = context.Request;
 
-		Guid guid = Guid.NewGuid();
-		Stream imageStream = request.InputStream;
 
 		string mimeType = request.Headers.Get("Content-Type");
 		if (mimeType == null)
@@ -98,9 +102,23 @@ public partial class AsciiMakerServer
 			return;
 		}
 
-		// TODO - Add async
-		byte[] buffer = Array.Empty<byte>();
-		imageStream.Read(buffer, 0, buffer.Length);
+		Stream stream = request.InputStream;
+		Guid guid = Guid.NewGuid();
+
+		if (request.ContentLength64 <= 0)
+		{
+			response.StatusCode = (int)HttpStatusCode.UnprocessableContent;
+			return;
+		}
+
+		if (request.ContentLength64 > MaxImageBufferSize)
+		{
+			response.StatusCode = (int)HttpStatusCode.RequestEntityTooLarge;
+			return;
+		}
+
+		byte[] buffer = new byte[MaxImageBufferSize];
+		stream.Read(buffer, 0, buffer.Length);
 
 		string guidString = guid.ToString();
 
@@ -121,20 +139,64 @@ public partial class AsciiMakerServer
 		var response = context.Response;
 		var request = context.Request;
 
-		string id = request.QueryString.Get("id");
-		if (id == null)
+		if (!Helper.TryToGetIDFromURL(request.QueryString, out var code, out var guid))
 		{
-			response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.StatusCode = code;
 			return;
 		}
 
-		Guid guid = Guid.Parse(id);
 		var tempImage = ImageCache.Get(guid);
+		if (tempImage.Blob.Length <= 0)
+		{
+			response.StatusCode = (int)HttpStatusCode.NotFound;
+			return;
+		}
 
 		response.ContentType = tempImage.MimeType;
 		response.ContentLength64 = tempImage.Blob.Length;
 		response.StatusCode = (int)HttpStatusCode.OK;
 		response.OutputStream.Write(tempImage.Blob, 0, tempImage.Blob.Length);
+	}
+
+	[UrlHandler("/api/convert-image-to-ascii", ["GET"])]
+	public void ConvertToImage(HttpListenerContext context)
+	{
+		var response = context.Response;
+		var request = context.Request;
+
+		if (!Helper.TryToGetIDFromURL(request.QueryString, out var code, out var guid))
+		{
+			response.StatusCode = code;
+			return;
+		}
+
+		var tempImage = ImageCache.Get(guid);
+		if (tempImage.Blob.Length <= 0)
+		{
+			response.StatusCode = (int)HttpStatusCode.NotFound;
+			return;
+		}
+
+		// TODO - More patterns / Custom pattern surport
+
+		string asciiImage;
+
+		try
+		{
+			Pattern pattern = ImageToAscii.PatternList[0];
+			asciiImage = ImageToAscii.Load(tempImage.Blob, pattern);
+		}
+		catch (Exception)
+		{
+			throw;
+		}
+
+		byte[] asciiBytes = Encoding.UTF8.GetBytes(asciiImage);
+
+		response.StatusCode = (int)HttpStatusCode.OK;
+		response.ContentLength64 = asciiBytes.Length;
+		response.ContentType = "text/plain; charset=utf-8";
+		response.OutputStream.Write(asciiBytes);
 	}
 }
 

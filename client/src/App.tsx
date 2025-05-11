@@ -7,14 +7,11 @@ const App: Component = () => {
 	return (
 		<InputContext>
 			<Header />
-
 			<div id='content'>
 				<p>
 					An easy way to convert any image into ascii art. Quick, Easy, No
 					payment ever!
 				</p>
-
-				<img id='source-image' />
 
 				<Inputs />
 
