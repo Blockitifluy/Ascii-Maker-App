@@ -24,10 +24,7 @@ public class Pattern
 		return sets;
 	}
 
-	public Pattern()
-	{
-
-	}
+	public Pattern() { }
 }
 
 public struct PatternSet(string ch, float pos)

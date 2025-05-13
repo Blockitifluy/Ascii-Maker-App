@@ -18,7 +18,7 @@ public static class Helper
 
 		if (!Guid.TryParse(id, out var newGuid))
 		{
-			code = (int)HttpStatusCode.UnprocessableContent;
+			code = (int)HttpStatusCode.BadRequest;
 			guid = Guid.Empty;
 			return false;
 		}
@@ -33,10 +33,10 @@ public static class Helper
 		using var result = new MemoryStream();
 
 		var lengthBytes = BitConverter.GetBytes(input.Length);
-		result.Write(lengthBytes, 0, 4);
+		result.Write(lengthBytes);
 
 		using GZipStream gzipStream = new(result, CompressionMode.Compress);
-		gzipStream.Write(input, 0, input.Length);
+		;
 		gzipStream.Flush();
 		return result.ToArray();
 	}

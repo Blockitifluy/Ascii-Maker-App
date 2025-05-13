@@ -1,22 +1,24 @@
 # Ascii Maker App
 
-This is the contination of the [PNG-to-Plain-Ascii](https://github.com/Blockitifluy/PNG-to-Plain-Ascii) repository. The major difference is that this repo is a website with a server and latter is writen witth python.
+This is the contination of the [PNG-to-Plain-Ascii](https://github.com/Blockitifluy/PNG-to-Plain-Ascii) repository written back in 2022. The major difference is that this repo is a website with a server and latter is writen with python.
 
 ## How to Build
 
 Run the build.bat on the root directory, to compile both the server and the client.
 
-```bat
-npm run build --prefix client
-```
-
-and
+Compiling client:
 
 ```bat
-./build
+./build-client
 ```
 
-You can see changes on [dist](dist/) and `bin/Debug/net{VERSION HERE}`.
+Compiling server:
+
+```bat
+./build-server
+```
+
+You can see changes on [dist](dist/) and [build folders](build/) for the client and api respectively.
 
 ## Client
 
@@ -26,23 +28,24 @@ The client is made with:
 - SolidJS,
 - TypeScript
 
-### `npm run dev`
+## Server
 
-Runs the app in the development mode.<br>
-Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
+The server and api is made with C# and SixLabors' [ImageSharp](https://github.com/SixLabors/ImageSharp).
 
-## Usage
+## Running the App in Developement Mode
 
-```bash
-npm install # or pnpm install or yarn install
+```bat
+npm run dev
 ```
+
+Opens [http://localhost:5173](http://localhost:5173) to view it in the browser.
 
 ## Example
 
-| Orginal Image           | Ascii File                        |
+| Orginal Image           | Ascii Text File                   |
 | ----------------------- | --------------------------------- |
 | ![cat](example/cat.jpg) | ![cat result](example/result.png) |
 
 ## Deployment
 
-Learn more about deploying your application with the [documentations](https://vite.dev/guide/static-deploy.html)
+Learn more about deploying your application with the [documentations](https://vite.dev/guide/static-deploy.html).

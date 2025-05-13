@@ -1,6 +1,5 @@
 @echo off
 
-cd client
-npm run build
+npm run build --prefix client
 
 echo Build finished

@@ -1,16 +1,19 @@
 import { Component, createContext, Show, useContext } from "solid-js";
 import { ComponentChildrenProps, StoreSignal } from "../lib/helper";
 import { createStore } from "solid-js/store";
-import { UploadImage } from "../lib/api";
+import { GetAsciiDownloadURL, UploadImage } from "../lib/api";
 import { BaseURL } from "../lib/api";
+import Preview from "./preview";
 
 export interface AsciiParams {
 	Size: number;
 	ImageID: string;
+	Brightness: number;
 }
 
 const InitAsciiParams: AsciiParams = {
-	Size: 50,
+	Size: 100,
+	Brightness: 1.5,
 	ImageID: ""
 };
 
@@ -51,7 +54,7 @@ export function SetAsciiParams(
 function GetValueFromType(target: HTMLInputElement): unknown {
 	switch (target.type) {
 		case "number":
-			return parseInt(target.value);
+			return parseFloat(target.value);
 		case "file":
 			return target.files?.item(0);
 		default:
@@ -103,13 +106,34 @@ const Inputs: Component = () => {
 				accept='image/png, image/jpeg'
 				on:change={setImage}
 			/>
+
+			<label for='size-input'>Size</label>
 			<input
 				type='number'
-				id='size'
+				id='size-input'
 				on:change={updateFormField("Size")}
 				value={asciiParams.Size}
 			/>
-			<button class='convert'>Convert</button>
+
+			<label for='bright-input'>Brightness</label>
+			<input
+				type='number'
+				id='bright-input'
+				on:change={updateFormField("Brightness")}
+				value={asciiParams.Brightness}
+			/>
+
+			<Show when={asciiParams.ImageID !== ""}>
+				<Preview />
+			</Show>
+
+			<a
+				href={GetAsciiDownloadURL(asciiParams)}
+				class='convert'
+				download='acsii.txt'
+			>
+				Convert
+			</a>
 		</div>
 	);
 };

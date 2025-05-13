@@ -81,3 +81,15 @@ label[for="image-input"] {
 		cursor: pointer;
 	}
 }
+
+#preview {
+	background-color: $text;
+	color: $white;
+	aspect-ratio: 1;
+	font-size: 0.2em;
+	display: flexbox;
+	width: fit-content;
+	height: fit-content;
+	margin: 8px auto;
+	padding: 8px;
+}

@@ -11,14 +11,29 @@ using SixLabors.ImageSharp;
 
 #pragma warning disable CA1822 // Mark members as static
 
+/// <summary>
+/// A temporary image to be stored for the use of converting into ascii art.
+/// </summary>
+/// <param name="blob"><inheritdoc cref="TempImage.Blob" path="/summary"/></param>
+/// <param name="mimeType"><inheritdoc cref="TempImage.MimeType" path="/summary"/></param>
 public struct TempImage(byte[] blob, string mimeType)
 {
+	/// <summary>
+	/// The image's bytes.
+	/// </summary>
 	public byte[] Blob = blob;
+	/// <summary>
+	/// The mime type of the image.
+	/// </summary>
 	public string MimeType = mimeType;
 }
 
 public partial class AsciiMakerServer
 {
+	/// <summary>
+	/// HTTP: The root HTML of the website.
+	/// </summary>
+	/// <param name="context">HTTP context</param>
 	[UrlHandler("/", ["GET"])]
 	public void Root(HttpListenerContext context)
 	{
@@ -33,6 +48,10 @@ public partial class AsciiMakerServer
 		response.OutputStream.Write(html, 0, html.Length);
 	}
 
+	/// <summary>
+	/// HTTP: Handles all context of the folder <c>dist/assets</c>.
+	/// </summary>
+	/// <param name="context">HTTP context</param>
 	[UrlHandler("/assets/~", ["GET"])]
 	public void Assets(HttpListenerContext context)
 	{
@@ -66,11 +85,18 @@ public partial class AsciiMakerServer
 
 	public Cache<Guid, TempImage> ImageCache = new();
 
+	/// <summary>
+	/// The amount of time, a <see cref="ImageCache"/> element lasts for.
+	/// </summary>
 	public static TimeSpan TempImageTimeSpan = new(1, 0, 0);
 
 	// Can store 4 Megabytes
 	const int MaxImageBufferSize = 1024 * 1024 * 4;
 
+	/// <summary>
+	/// HTTP: Handles uploading and downloading images for the Ascii Maker service. 
+	/// </summary>
+	/// <param name="context">HTTP context</param>
 	[UrlHandler("/api/image", ["POST", "GET"])]
 	public void HandleImage(HttpListenerContext context)
 	{
@@ -89,6 +115,10 @@ public partial class AsciiMakerServer
 		}
 	}
 
+	/// <summary>
+	/// HTTP: Handles uploading images for the Ascii Maker service.
+	/// </summary>
+	/// <param name="context">HTTP context with a request of an image body and responses with a Guid of the image.</param>
 	public void UploadImage(HttpListenerContext context)
 	{
 		var response = context.Response;
@@ -107,7 +137,7 @@ public partial class AsciiMakerServer
 
 		if (request.ContentLength64 <= 0)
 		{
-			response.StatusCode = (int)HttpStatusCode.UnprocessableContent;
+			response.StatusCode = (int)HttpStatusCode.BadRequest;
 			return;
 		}
 
@@ -134,6 +164,10 @@ public partial class AsciiMakerServer
 		response.OutputStream.Write(guidBytes, 0, guidBytes.Length);
 	}
 
+	/// <summary>
+	/// HTTP: Handles downloading images to the client.
+	/// </summary>
+	/// <param name="context">HTTP context with a request of <c>?id=Guid</c> and responses with an image body.</param>
 	public void GetImage(HttpListenerContext context)
 	{
 		var response = context.Response;
@@ -158,20 +192,37 @@ public partial class AsciiMakerServer
 		response.OutputStream.Write(tempImage.Blob, 0, tempImage.Blob.Length);
 	}
 
+	/// <summary>
+	/// HTTP: Handler converting an image into ascii art.
+	/// </summary>
+	/// <param name="context">HTTP context with a request of <c>?id=GUID&amp;size=int&amp;bright=float</c> and responses with ascii art.</param>
 	[UrlHandler("/api/convert-image-to-ascii", ["GET"])]
 	public void ConvertToImage(HttpListenerContext context)
 	{
 		var response = context.Response;
 		var request = context.Request;
+		var query = request.QueryString;
 
-		if (!Helper.TryToGetIDFromURL(request.QueryString, out var code, out var guid))
+		if (!Helper.TryToGetIDFromURL(query, out var code, out var guid))
 		{
 			response.StatusCode = code;
 			return;
 		}
 
+		if (!int.TryParse(query.Get("size"), out var size))
+		{
+			response.StatusCode = (int)HttpStatusCode.BadRequest;
+			return;
+		}
+
+		if (!float.TryParse(query.Get("bright"), out var brightness))
+		{
+			response.StatusCode = (int)HttpStatusCode.BadRequest;
+			return;
+		}
+
 		var tempImage = ImageCache.Get(guid);
-		if (tempImage.Blob.Length <= 0)
+		if (tempImage.Blob == null)
 		{
 			response.StatusCode = (int)HttpStatusCode.NotFound;
 			return;
@@ -181,10 +232,21 @@ public partial class AsciiMakerServer
 
 		string asciiImage;
 
+		MemoryStream stream = new();
+		stream.Write(tempImage.Blob);
+		stream.Position = 0;
+
+		AsciiOptions asciiOptions = new(size, brightness);
+
 		try
 		{
-			Pattern pattern = ImageToAscii.PatternList[0];
-			asciiImage = ImageToAscii.Load(tempImage.Blob, pattern);
+			Pattern pattern = ImageToAscii.PatternList[Program.DefaultPattern];
+			asciiImage = ImageToAscii.Load(stream, pattern, asciiOptions);
+		}
+		catch (ImageFormatException)
+		{
+			response.StatusCode = (int)HttpStatusCode.UnsupportedMediaType;
+			return;
 		}
 		catch (Exception)
 		{

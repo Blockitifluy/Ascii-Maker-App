@@ -100,6 +100,12 @@ public sealed partial class AsciiMakerServer
 		Console.WriteLine("\nEnded http server!");
 	}
 
+	/// <summary>
+	/// Trys to get the handler approprate for the request.
+	/// </summary>
+	/// <param name="request">HTTP Request to be handled.</param>
+	/// <param name="outHandler">The handler approprate for the request.</param>
+	/// <returns>Has a handler been found.</returns>
 	private bool TryGetRequestToHandler(HttpListenerRequest request, out HandlerData outHandler)
 	{
 		foreach (HandlerData handler in UrlHandlers.Values)
@@ -192,7 +198,9 @@ public sealed partial class AsciiMakerServer
 			return;
 		}
 
+		Console.ForegroundColor = ConsoleColor.Cyan;
 		Console.WriteLine($"> Recieved request ({localPath})");
+		Console.ResetColor();
 
 		Stopwatch timer = new();
 		timer.Start();
@@ -203,7 +211,9 @@ public sealed partial class AsciiMakerServer
 		}
 		catch (Exception ex)
 		{
+			Console.ForegroundColor = ConsoleColor.Red;
 			Console.WriteLine($"\tServer has expierenced an error while handling request, see {Program.LogPath} more info!");
+			Console.ResetColor();
 
 			File.AppendAllText(Program.LogPath, "\n" + ex);
 

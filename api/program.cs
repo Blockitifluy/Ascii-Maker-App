@@ -9,33 +9,37 @@ public static class Program
 {
 	public const int DefaultPattern = 0;
 
+	/// <summary>
+	/// Tests the ascii art system, uses <c>example/cat.jpg</c> and outputs to <c>example/cat.txt</c>
+	/// </summary>
 	public static void TestAscii()
 	{
-		const string ExampleResult = @".\example\cat.txt";
-		const string ExamplePicture = @".\example\cat.jpg";
+		const string ExampleResult = "example/cat.txt",
+		ExamplePicture = "example/cat.jpg";
 
 		Console.WriteLine($"> Running Test on {ExamplePicture} to {ExampleResult}");
 
 		using FileStream image = new(ExamplePicture, FileMode.Open);
 		Pattern pattern = ImageToAscii.PatternList[DefaultPattern];
-
-		byte[] b = new byte[image.Length];
-		image.Write(b, 0, b.Length);
+		image.Position = 0;
 
 		try
 		{
-			string ascii = ImageToAscii.Load(b, pattern);
+			string ascii = ImageToAscii.Load(image, pattern);
 
 			using FileStream imageResult = new(ExampleResult, FileMode.Create);
 			byte[] asciiBytes = Encoding.UTF8.GetBytes(ascii);
 			imageResult.Write(asciiBytes);
 		}
-		catch (Exception)
+		catch (Exception ex)
 		{
-			throw;
+			File.AppendAllText(LogPath, "\n" + ex);
 		}
 	}
 
+	/// <summary>
+	/// The log file used for the server.
+	/// </summary>
 	public static string LogPath = "log/server.log";
 	private static AsciiMakerServer _HttpServer;
 	public static AsciiMakerServer HttpServer => _HttpServer;
@@ -46,7 +50,10 @@ public static class Program
 	{
 		// TODO - Add proper log system
 		File.WriteAllText(LogPath, "");
-		Console.WriteLine("Running AsciiMaker server!");
+
+		Console.ForegroundColor = ConsoleColor.Green;
+		Console.WriteLine("\nRunning AsciiMaker server!");
+		Console.ResetColor();
 
 		ImageToAscii.LoadPatterns();
 		Console.WriteLine("> Loaded Ascii Patterns");
@@ -56,11 +63,13 @@ public static class Program
 			case "test":
 				TestAscii();
 				break;
-			default:
+			case "":
 				_HttpServer = new AsciiMakerServer(DefaultPort);
 				Console.WriteLine($"> Initised http server on {DefaultPort}");
 				_HttpServer.Start();
 				break;
+			default:
+				return 1;
 		}
 
 		return 0;
