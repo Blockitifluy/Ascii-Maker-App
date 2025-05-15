@@ -35,7 +35,7 @@ The server and api is made with C# and SixLabors' [ImageSharp](https://github.co
 ## Running the App in Developement Mode
 
 ```bat
-npm run dev
+npm run dev --prefix client
 ```
 
 Opens [http://localhost:5173](http://localhost:5173) to view it in the browser.

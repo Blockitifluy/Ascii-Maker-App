@@ -33,23 +33,26 @@ public static class Program
 		}
 		catch (Exception ex)
 		{
-			File.AppendAllText(LogPath, "\n" + ex);
+			LogSystem.Write(ex);
 		}
 	}
 
 	/// <summary>
 	/// The log file used for the server.
 	/// </summary>
-	public static string LogPath = "log/server.log";
 	private static AsciiMakerServer _HttpServer;
 	public static AsciiMakerServer HttpServer => _HttpServer;
+
+	public static string LogPath = "log/server.log";
+	private static LogSystem _LogSystem;
+	public static LogSystem LogSystem => _LogSystem;
 
 	public const int DefaultPort = 8000;
 
 	public static int Main(string[] args)
 	{
-		// TODO - Add proper log system
-		File.WriteAllText(LogPath, "");
+		_LogSystem = new(LogPath);
+		LogSystem.Clear();
 
 		Console.ForegroundColor = ConsoleColor.Green;
 		Console.WriteLine("\nRunning AsciiMaker server!");

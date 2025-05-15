@@ -1,21 +1,47 @@
-$orange-peel: #ff9f1cff;
-$hunyadi-yellow: #ffbf69ff;
 $white: #ffffffff;
-$text: #333333ff;
-$mint-green: #cbf3f0ff;
-$light-sea-green: #2ec4b6ff;
+$rich-black: #00171fff;
+$prussian-blue: #003459ff;
+$cerulean: #007ea7ff;
+$picton-blue: #00a8e8ff;
+$error: #df2a42;
+
 $small-rounded: 0.5rem;
 
 body {
-	color: $text;
+	color: $rich-black;
 }
 
 #title {
-	background-color: $light-sea-green;
-	text-align: center;
+	background-color: $cerulean;
+	display: flex;
 	padding: 1rem 0;
-	font-size: 3rem;
 	margin: 0;
+	justify-content: center;
+	align-items: center;
+	gap: 1rem;
+
+	h1 {
+		font-size: 3rem;
+		text-align: center;
+		margin-bottom: 0;
+	}
+
+	h1 > a {
+		color: $white;
+		text-decoration: none;
+		transition: color 200ms ease;
+
+		&:hover {
+			color: $prussian-blue;
+		}
+	}
+
+	& > sub {
+		padding: 0 16px 0 0;
+		margin: 0;
+		font-size: 1rem;
+		color: $white;
+	}
 }
 
 #content {
@@ -24,36 +50,21 @@ body {
 	padding: 2rem;
 }
 
-#source-image {
-	width: 100%;
-	min-height: 16rem;
-	border: $orange-peel 2px solid;
-	user-select: none;
-}
-
 #inputs {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
 
+	& input[type="checkbox"] {
+		margin-left: 0.5rem;
+	}
+
 	.convert {
-		background-color: $orange-peel;
 		border-radius: $small-rounded;
 		border: none;
 		font-weight: 500;
 		padding: 6px 12px;
-		color: $white;
 		margin: auto;
-		transition: background-color 0.5s ease;
-
-		&:hover {
-			background-color: $hunyadi-yellow;
-			cursor: pointer;
-		}
-		&:active {
-			background-color: $orange-peel;
-			cursor: pointer;
-		}
 	}
 }
 
@@ -61,35 +72,109 @@ input[type="file"]#image-input {
 	display: none;
 }
 
-label[for="image-input"] {
-	background-color: $light-sea-green;
+button,
+input[type="button"],
+.button-like {
+	background-color: $cerulean;
+	text-decoration: none;
+	transition: background-color color color 2s ease;
 	color: $white;
 	font-weight: 500;
 	border-radius: $small-rounded;
 	padding: 6px 12px;
 	cursor: pointer;
-	transition: background-color, color 0.5s ease;
+	border: none;
 
 	&:hover {
-		background-color: $hunyadi-yellow;
-		color: $text;
+		background-color: $prussian-blue;
 		cursor: pointer;
 	}
+
 	&:active {
-		background-color: $hunyadi-yellow;
-		color: $text;
-		cursor: pointer;
+		background-color: $picton-blue;
+		color: $rich-black;
+		cursor: grab;
 	}
 }
 
-#preview {
-	background-color: $text;
+.underlined {
+	text-decoration: underline $rich-black;
+}
+
+input:not([type="button"]) {
+	border-radius: $small-rounded;
+	border: none;
+	background-color: $rich-black;
 	color: $white;
+	padding: 8px;
+}
+
+label[for="image-input"] {
+	font-weight: 500;
+	border-radius: $small-rounded;
+	padding: 6px 12px;
+	cursor: pointer;
+}
+
+#source-image {
+	aspect-ratio: 1;
+	user-select: none;
+}
+
+#preview {
 	aspect-ratio: 1;
 	font-size: 0.2em;
-	display: flexbox;
-	width: fit-content;
-	height: fit-content;
-	margin: 8px auto;
-	padding: 8px;
+	overflow: hidden;
+}
+
+#preview-menu {
+	display: flex;
+	flex-direction: row;
+	gap: 8px;
+
+	& > * {
+		margin: 0;
+		height: 16rem;
+		border: $picton-blue 2px solid;
+	}
+}
+
+#feedback-msg {
+	margin: 1rem 0;
+	padding: 0.5rem 1rem;
+	color: $white;
+
+	& > h1 {
+		margin-top: 0.5rem;
+		font-size: large;
+	}
+
+	&.error {
+		background-color: transparentize($error, 0.5);
+	}
+
+	&.success {
+		border-radius: 1rem;
+		background-color: transparentize($picton-blue, 0.5);
+	}
+}
+
+#major-err {
+	max-width: 32rem;
+	margin: 1rem auto 0 auto;
+	padding: 0.5rem 1rem;
+	border-radius: 1rem;
+	background-color: adjust($error, 0.5);
+	color: $white;
+
+	& > h1 {
+		margin-top: 0.5rem;
+		font-size: large;
+	}
+
+	& > button {
+		background-color: $error;
+		color: $rich-black;
+		font-weight: 600;
+	}
 }

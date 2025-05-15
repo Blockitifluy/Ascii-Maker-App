@@ -93,7 +93,12 @@ public sealed partial class AsciiMakerServer
 
 		while (!IsClosing)
 		{
-			Loop();
+			HttpListenerContext context = Listener.GetContext();
+
+			if (context == null)
+				return;
+
+			Task.Run(() => ProcessContext(context));
 		}
 
 		Listener.Close();
@@ -177,9 +182,8 @@ public sealed partial class AsciiMakerServer
 
 	public static string ErrorMessage = "Error when processing request. Please try again later";
 
-	private void Loop()
+	private void ProcessContext(HttpListenerContext context)
 	{
-		HttpListenerContext context = Listener.GetContext();
 		HttpListenerResponse response = context.Response;
 		HttpListenerRequest request = context.Request;
 
@@ -198,10 +202,6 @@ public sealed partial class AsciiMakerServer
 			return;
 		}
 
-		Console.ForegroundColor = ConsoleColor.Cyan;
-		Console.WriteLine($"> Recieved request ({localPath})");
-		Console.ResetColor();
-
 		Stopwatch timer = new();
 		timer.Start();
 
@@ -212,10 +212,10 @@ public sealed partial class AsciiMakerServer
 		catch (Exception ex)
 		{
 			Console.ForegroundColor = ConsoleColor.Red;
-			Console.WriteLine($"\tServer has expierenced an error while handling request, see {Program.LogPath} more info!");
+			Console.WriteLine($"\tServer has expierenced an error while handling request ({localPath}), see {Program.LogPath} more info!");
 			Console.ResetColor();
 
-			File.AppendAllText(Program.LogPath, "\n" + ex);
+			Program.LogSystem.Write(ex);
 
 			byte[] errorMsg = Encoding.UTF8.GetBytes(ErrorMessage);
 
@@ -228,6 +228,10 @@ public sealed partial class AsciiMakerServer
 		finally
 		{
 			timer.Stop();
+
+			Console.ForegroundColor = ConsoleColor.Cyan;
+			Console.WriteLine($"> Handled request ({localPath})");
+			Console.ResetColor();
 			Console.WriteLine($"\tRequest took {timer.ElapsedMilliseconds}ms");
 		}
 

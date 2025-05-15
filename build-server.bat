@@ -19,5 +19,5 @@ echo build finished
 xcopy client\dist dist /S /I /Y
 
 xcopy dist bin\Debug\net9.0\dist /E /I /Y
-xcopy server\picture\patterns.json bin\Debug\net9.0\server\picture\patterns.json /I /Y
+xcopy api\picture\patterns.json bin\Debug\net9.0\api\picture\patterns.json /I /Y
 echo copied dist and patterns.json

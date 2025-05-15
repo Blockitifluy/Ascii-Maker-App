@@ -8,16 +8,25 @@ namespace ImageToAscii.Picture;
 
 using PixelType = HalfSingle;
 
-public struct AsciiOptions(int size, float brightness)
+public struct AsciiOptions
 {
-	public int Size = size;
-	public float Brightness = brightness;
+	public int Size { get; set; }
+	public float Brightness { get; set; }
+	public bool Invert { get; set; }
 
-	public static AsciiOptions DefaultParams = new()
+	public AsciiOptions(int size, float brightness, bool invert)
 	{
-		Size = 100,
-		Brightness = 1.5f
-	};
+		Size = size;
+		Brightness = brightness;
+		Invert = invert;
+	}
+
+	public AsciiOptions()
+	{
+		Size = 100;
+		Brightness = 1.5f;
+		Invert = false;
+	}
 }
 
 static class ImageToAscii
@@ -75,7 +84,7 @@ static class ImageToAscii
 		return CharNotFound;
 	}
 
-	private static string ProcessPixel(Image<PixelType> image, int i, Pattern pattern)
+	private static string ProcessPixel(Image<PixelType> image, int i, Pattern pattern, AsciiOptions asciiOptions)
 	{
 		int x = i % image.Width,
 			y = i / image.Width;
@@ -87,6 +96,8 @@ static class ImageToAscii
 
 		float raw = image[x, y].ToSingle();
 		float pixel = (raw + 1f) / 2;
+		if (asciiOptions.Invert)
+			pixel = 1 - pixel;
 
 		string ascii = GetCharFromPattern(pixel, pattern);
 		res += ascii + " ";
@@ -96,7 +107,7 @@ static class ImageToAscii
 
 	public static string Load(Stream ImageStream, Pattern pattern)
 	{
-		return Load(ImageStream, pattern, AsciiOptions.DefaultParams);
+		return Load(ImageStream, pattern, new());
 	}
 
 	public static string Load(Stream ImageStream, Pattern pattern, AsciiOptions asciiOptions)
@@ -117,7 +128,7 @@ static class ImageToAscii
 
 		for (int i = 0; i < area; i++)
 		{
-			string processed = ProcessPixel(image, i, pattern);
+			string processed = ProcessPixel(image, i, pattern, asciiOptions);
 			imageAscii += processed;
 		}
 

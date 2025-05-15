@@ -1,19 +1,26 @@
 import { Component, createContext, Show, useContext } from "solid-js";
-import { ComponentChildrenProps, StoreSignal } from "../lib/helper";
+import {
+	ComponentChildrenProps,
+	GetValueFromType,
+	StoreSignal
+} from "../lib/helper";
 import { createStore } from "solid-js/store";
-import { GetAsciiDownloadURL, UploadImage } from "../lib/api";
+import { ConvertToAscii, UploadImage } from "../lib/api";
 import { BaseURL } from "../lib/api";
 import Preview from "./preview";
+import FeedbackComponent, { SetFeedback } from "./feedback-message";
 
 export interface AsciiParams {
 	Size: number;
-	ImageID: string;
 	Brightness: number;
+	Invert: boolean;
+	ImageID: string;
 }
 
 const InitAsciiParams: AsciiParams = {
 	Size: 100,
 	Brightness: 1.5,
+	Invert: false,
 	ImageID: ""
 };
 
@@ -51,19 +58,8 @@ export function SetAsciiParams(
 	asciiParams[1](key, value);
 }
 
-function GetValueFromType(target: HTMLInputElement): unknown {
-	switch (target.type) {
-		case "number":
-			return parseFloat(target.value);
-		case "file":
-			return target.files?.item(0);
-		default:
-			return target.value;
-	}
-}
-
 const Inputs: Component = () => {
-	const asciiParams = GetAsciiParams();
+	const asciiParams = () => GetAsciiParams();
 
 	const updateFormField = (fieldName: keyof AsciiParams) => (event: Event) => {
 		const inputElement = event.currentTarget as HTMLInputElement;
@@ -73,7 +69,6 @@ const Inputs: Component = () => {
 		) as AsciiParams[typeof fieldName];
 
 		SetAsciiParams(fieldName, value);
-		console.log(asciiParams);
 	};
 
 	const setImage = async (event: Event) => {
@@ -85,21 +80,47 @@ const Inputs: Component = () => {
 			return;
 		}
 
-		const id = await UploadImage(file);
+		try {
+			const id = await UploadImage(file);
 
-		SetAsciiParams("ImageID", id);
+			SetAsciiParams("ImageID", id);
+		} catch (e) {
+			const ex = e as Error;
+
+			SetFeedback({ IsError: true, Message: ex.message });
+		}
+	};
+
+	const copyResult = async () => {
+		try {
+			const ascii = await ConvertToAscii(asciiParams());
+
+			navigator.clipboard.writeText(ascii);
+		} catch (e) {
+			const ex: Error = e as Error;
+
+			SetFeedback({
+				IsError: true,
+				Message: ex.message
+			});
+		}
 	};
 
 	return (
 		<div id='inputs'>
-			<Show when={asciiParams.ImageID !== ""}>
-				<img
-					id='source-image'
-					src={BaseURL + `api/image?id=${asciiParams.ImageID}`}
-				/>
+			<Show when={asciiParams().ImageID || import.meta.env.DEV}>
+				<div id='preview-menu'>
+					<img
+						id='source-image'
+						src={BaseURL + `api/image?id=${asciiParams().ImageID}`}
+					/>
+					<Preview />
+				</div>
 			</Show>
 
-			<label for='image-input'>Upload an image to convert</label>
+			<label for='image-input' class='button-like'>
+				Upload an image to convert
+			</label>
 			<input
 				type='file'
 				id='image-input'
@@ -107,33 +128,43 @@ const Inputs: Component = () => {
 				on:change={setImage}
 			/>
 
-			<label for='size-input'>Size</label>
+			<FeedbackComponent />
+
+			<label for='size-input' class='underlined'>
+				Size
+			</label>
 			<input
 				type='number'
 				id='size-input'
 				on:change={updateFormField("Size")}
-				value={asciiParams.Size}
+				value={asciiParams().Size}
 			/>
 
-			<label for='bright-input'>Brightness</label>
+			<label for='bright-input' class='underlined'>
+				Brightness
+			</label>
 			<input
 				type='number'
 				id='bright-input'
 				on:change={updateFormField("Brightness")}
-				value={asciiParams.Brightness}
+				value={asciiParams().Brightness}
 			/>
 
-			<Show when={asciiParams.ImageID !== ""}>
-				<Preview />
-			</Show>
+			<div>
+				<label for='invert-input' class='underlined'>
+					Invert:
+				</label>
+				<input
+					type='checkbox'
+					id='invert-input'
+					on:change={updateFormField("Invert")}
+					checked={asciiParams().Invert}
+				/>
+			</div>
 
-			<a
-				href={GetAsciiDownloadURL(asciiParams)}
-				class='convert'
-				download='acsii.txt'
-			>
+			<button class='convert' on:mousedown={copyResult}>
 				Convert
-			</a>
+			</button>
 		</div>
 	);
 };

@@ -1,8 +1,11 @@
 namespace ImageToAscii.Server;
 
+using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Web;
 using ImageToAscii.Helper;
 using ImageToAscii.Picture;
@@ -90,8 +93,8 @@ public partial class AsciiMakerServer
 	/// </summary>
 	public static TimeSpan TempImageTimeSpan = new(1, 0, 0);
 
-	// Can store 4 Megabytes
-	const int MaxImageBufferSize = 1024 * 1024 * 4;
+	// Can store 64 Megabytes
+	const int MaxImageBufferSize = 1024 * 1024 * 64;
 
 	/// <summary>
 	/// HTTP: Handles uploading and downloading images for the Ascii Maker service. 
@@ -124,7 +127,6 @@ public partial class AsciiMakerServer
 		var response = context.Response;
 		var request = context.Request;
 
-
 		string mimeType = request.Headers.Get("Content-Type");
 		if (mimeType == null)
 		{
@@ -141,7 +143,7 @@ public partial class AsciiMakerServer
 			return;
 		}
 
-		if (request.ContentLength64 > MaxImageBufferSize)
+		if (request.ContentLength64 >= MaxImageBufferSize)
 		{
 			response.StatusCode = (int)HttpStatusCode.RequestEntityTooLarge;
 			return;
@@ -196,7 +198,7 @@ public partial class AsciiMakerServer
 	/// HTTP: Handler converting an image into ascii art.
 	/// </summary>
 	/// <param name="context">HTTP context with a request of <c>?id=GUID&amp;size=int&amp;bright=float</c> and responses with ascii art.</param>
-	[UrlHandler("/api/convert-image-to-ascii", ["GET"])]
+	[UrlHandler("/api/convert-image-to-ascii", ["POST"])]
 	public void ConvertToImage(HttpListenerContext context)
 	{
 		var response = context.Response;
@@ -206,18 +208,6 @@ public partial class AsciiMakerServer
 		if (!Helper.TryToGetIDFromURL(query, out var code, out var guid))
 		{
 			response.StatusCode = code;
-			return;
-		}
-
-		if (!int.TryParse(query.Get("size"), out var size))
-		{
-			response.StatusCode = (int)HttpStatusCode.BadRequest;
-			return;
-		}
-
-		if (!float.TryParse(query.Get("bright"), out var brightness))
-		{
-			response.StatusCode = (int)HttpStatusCode.BadRequest;
 			return;
 		}
 
@@ -232,11 +222,15 @@ public partial class AsciiMakerServer
 
 		string asciiImage;
 
-		MemoryStream stream = new();
+		using MemoryStream stream = new();
 		stream.Write(tempImage.Blob);
 		stream.Position = 0;
 
-		AsciiOptions asciiOptions = new(size, brightness);
+		byte[] bodyBuffer = new byte[request.ContentLength64];
+		request.InputStream.Read(bodyBuffer, 0, bodyBuffer.Length);
+		string rawJSON = Encoding.UTF8.GetString(bodyBuffer);
+
+		var asciiOptions = JsonSerializer.Deserialize<AsciiOptions>(rawJSON);
 
 		try
 		{

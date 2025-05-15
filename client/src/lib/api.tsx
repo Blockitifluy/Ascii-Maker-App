@@ -16,29 +16,21 @@ export async function UploadImage(blob: Blob): Promise<string> {
 		throw new Error(`Uploading Image wasn't ok: ${res.status}`);
 	}
 
-	const ID = await res.text();
-
-	return ID;
-}
-
-export function GetAsciiDownloadURL(asciiParams: AsciiParams): string {
-	return (
-		BaseURL +
-		`api/convert-image-to-ascii?id=${asciiParams.ImageID}&size=${asciiParams.Size}&bright=${asciiParams.Brightness}`
-	);
+	return res.text();
 }
 
 export async function ConvertToAscii(
 	asciiParams: AsciiParams
 ): Promise<string> {
-	const url = GetAsciiDownloadURL(asciiParams);
+	const url = BaseURL + `api/convert-image-to-ascii?id=${asciiParams.ImageID}`;
 
-	const res = await fetch(url);
+	const res = await fetch(url, {
+		method: "POST",
+		body: JSON.stringify(asciiParams)
+	});
 	if (!res.ok) {
 		throw new Error(`Converting image wasn't ok: ${res.status}`);
 	}
 
-	const ascii = await res.text();
-
-	return ascii;
+	return res.text();
 }
