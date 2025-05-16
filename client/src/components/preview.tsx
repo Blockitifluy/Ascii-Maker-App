@@ -11,8 +11,6 @@ const Preview: Component = () => {
 		try {
 			const rAscii = await ConvertToAscii(ascii);
 
-			SetFeedback({ IsError: false, Message: "Successfully copied" });
-
 			return rAscii;
 		} catch (e) {
 			const ex = e as Error;
