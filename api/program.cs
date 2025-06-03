@@ -7,7 +7,8 @@ using ImageToAscii.Server;
 
 public static class Program
 {
-	public const int DefaultPattern = 0;
+	public const int DefaultPatternInt = 0;
+	public static Pattern DefaultPattern => ImageToAscii.PatternList[DefaultPatternInt];
 
 	/// <summary>
 	/// Tests the ascii art system, uses <c>example/cat.jpg</c> and outputs to <c>example/cat.txt</c>
@@ -20,16 +21,15 @@ public static class Program
 		Console.WriteLine($"> Running Test on {ExamplePicture} to {ExampleResult}");
 
 		using FileStream image = new(ExamplePicture, FileMode.Open);
-		Pattern pattern = ImageToAscii.PatternList[DefaultPattern];
+		Pattern pattern = DefaultPattern;
 		image.Position = 0;
 
 		try
 		{
-			string ascii = ImageToAscii.Load(image, pattern);
+			using Stream asciiStream = ImageToAscii.Load(image, pattern);
 
 			using FileStream imageResult = new(ExampleResult, FileMode.Create);
-			byte[] asciiBytes = Encoding.UTF8.GetBytes(ascii);
-			imageResult.Write(asciiBytes);
+			asciiStream.CopyTo(imageResult);
 		}
 		catch (Exception ex)
 		{

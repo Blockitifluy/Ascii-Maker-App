@@ -31,7 +31,7 @@ public struct TempImage(byte[] blob, string mimeType)
 	public string MimeType = mimeType;
 }
 
-public partial class AsciiMakerServer
+public sealed class AsciiMakerServer : HTTPServer
 {
 	/// <summary>
 	/// HTTP: The root HTML of the website.
@@ -45,10 +45,13 @@ public partial class AsciiMakerServer
 
 		var response = context.Response;
 
+		byte[] compressed = Helper.Compress(html);
+
+		response.AddHeader("Content-Encoding", "gzip");
 		response.ContentType = "text/html; charset=utf-8";
-		response.ContentLength64 = html.Length;
+		response.ContentLength64 = compressed.Length;
 		response.StatusCode = (int)HttpStatusCode.OK;
-		response.OutputStream.Write(html, 0, html.Length);
+		response.OutputStream.Write(compressed, 0, compressed.Length);
 	}
 
 	/// <summary>
@@ -74,10 +77,13 @@ public partial class AsciiMakerServer
 				mimeType = "application/octet-stream";
 			}
 
+			byte[] compressed = Helper.Compress(asset);
+
 			response.ContentType = mimeType;
-			response.ContentLength64 = asset.Length;
+			response.ContentLength64 = compressed.Length;
 			response.StatusCode = (int)HttpStatusCode.OK;
-			response.OutputStream.Write(asset, 0, asset.Length);
+			response.AddHeader("Content-Encoding", "gzip");
+			response.OutputStream.Write(compressed, 0, compressed.Length);
 		}
 		catch (FileNotFoundException ex)
 		{
@@ -130,7 +136,7 @@ public partial class AsciiMakerServer
 		string mimeType = request.Headers.Get("Content-Type");
 		if (mimeType == null)
 		{
-			response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.StatusCode = (int)HttpStatusCode.UnsupportedMediaType;
 			return;
 		}
 
@@ -139,22 +145,21 @@ public partial class AsciiMakerServer
 
 		if (request.ContentLength64 <= 0)
 		{
-			response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.StatusCode = (int)HttpStatusCode.LengthRequired;
 			return;
 		}
-
-		if (request.ContentLength64 >= MaxImageBufferSize)
+		else if (request.ContentLength64 > MaxImageBufferSize)
 		{
 			response.StatusCode = (int)HttpStatusCode.RequestEntityTooLarge;
 			return;
 		}
 
-		byte[] buffer = new byte[MaxImageBufferSize];
-		stream.Read(buffer, 0, buffer.Length);
+		byte[] b = new byte[request.ContentLength64];
+		stream.Read(b);
 
 		string guidString = guid.ToString();
 
-		TempImage tempImage = new(buffer, mimeType);
+		TempImage tempImage = new(b, mimeType);
 
 		ImageCache.Store(guid, tempImage, TempImageTimeSpan);
 
@@ -188,10 +193,24 @@ public partial class AsciiMakerServer
 			return;
 		}
 
+		byte[] b = Helper.Compress(tempImage.Blob);
+
 		response.ContentType = tempImage.MimeType;
-		response.ContentLength64 = tempImage.Blob.Length;
+		response.ContentLength64 = b.Length;
 		response.StatusCode = (int)HttpStatusCode.OK;
-		response.OutputStream.Write(tempImage.Blob, 0, tempImage.Blob.Length);
+		response.AddHeader("Content-Encoding", "gzip");
+		response.OutputStream.Write(b);
+	}
+
+	public AsciiOptions GetAsciiOptions(HttpListenerRequest request)
+	{
+		byte[] bodyBuffer = new byte[request.ContentLength64];
+		request.InputStream.Read(bodyBuffer, 0, bodyBuffer.Length);
+		string rawJSON = Encoding.UTF8.GetString(bodyBuffer);
+
+		var asciiOptions = JsonSerializer.Deserialize<AsciiOptions>(rawJSON);
+
+		return asciiOptions;
 	}
 
 	/// <summary>
@@ -199,7 +218,7 @@ public partial class AsciiMakerServer
 	/// </summary>
 	/// <param name="context">HTTP context with a request of <c>?id=GUID&amp;size=int&amp;bright=float</c> and responses with ascii art.</param>
 	[UrlHandler("/api/convert-image-to-ascii", ["POST"])]
-	public void ConvertToImage(HttpListenerContext context)
+	public void ConvertToAscii(HttpListenerContext context)
 	{
 		var response = context.Response;
 		var request = context.Request;
@@ -220,22 +239,26 @@ public partial class AsciiMakerServer
 
 		// TODO - More patterns / Custom pattern surport
 
-		string asciiImage;
+		using MemoryStream stream = new(tempImage.Blob);
 
-		using MemoryStream stream = new();
-		stream.Write(tempImage.Blob);
 		stream.Position = 0;
-
-		byte[] bodyBuffer = new byte[request.ContentLength64];
-		request.InputStream.Read(bodyBuffer, 0, bodyBuffer.Length);
-		string rawJSON = Encoding.UTF8.GetString(bodyBuffer);
-
-		var asciiOptions = JsonSerializer.Deserialize<AsciiOptions>(rawJSON);
+		var asciiOptions = GetAsciiOptions(request);
 
 		try
 		{
-			Pattern pattern = ImageToAscii.PatternList[Program.DefaultPattern];
-			asciiImage = ImageToAscii.Load(stream, pattern, asciiOptions);
+			Pattern pattern = Program.DefaultPattern;
+
+			Stream asciiStream = ImageToAscii.Load(stream, pattern, asciiOptions);
+			asciiStream.Position = 0;
+
+			byte[] b = new byte[asciiStream.Length];
+			asciiStream.Read(b, 0, b.Length);
+
+			byte[] compressed = Helper.Compress(b);
+
+			response.AddHeader("Content-Encoding", "gzip");
+			response.ContentLength64 = compressed.Length;
+			response.OutputStream.Write(compressed, 0, compressed.Length);
 		}
 		catch (ImageFormatException)
 		{
@@ -247,13 +270,12 @@ public partial class AsciiMakerServer
 			throw;
 		}
 
-		byte[] asciiBytes = Encoding.UTF8.GetBytes(asciiImage);
 
 		response.StatusCode = (int)HttpStatusCode.OK;
-		response.ContentLength64 = asciiBytes.Length;
 		response.ContentType = "text/plain; charset=utf-8";
-		response.OutputStream.Write(asciiBytes);
 	}
+
+	public AsciiMakerServer(int port) : base(port) { }
 }
 
 #pragma warning restore CA1822 // Mark members as static

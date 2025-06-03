@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
@@ -29,7 +30,15 @@ public struct AsciiOptions
 	}
 }
 
-static class ImageToAscii
+[Serializable]
+public class ProcessingException : Exception
+{
+	public ProcessingException() { }
+	public ProcessingException(string message) : base(message) { }
+	public ProcessingException(string message, Exception inner) : base(message, inner) { }
+}
+
+public static class ImageToAscii
 {
 	public static List<Pattern> PatternList = [];
 
@@ -105,33 +114,37 @@ static class ImageToAscii
 		return res;
 	}
 
-	public static string Load(Stream ImageStream, Pattern pattern)
+	public static Stream Load(Stream ImageStream, Pattern pattern)
 	{
 		return Load(ImageStream, pattern, new());
 	}
 
-	public static string Load(Stream ImageStream, Pattern pattern, AsciiOptions asciiOptions)
+	public static Stream Load(Stream ImageStream, Pattern pattern, AsciiOptions asciiOptions)
 	{
 		if (!CanProcessImage(out var eCanProcess))
 		{
-			throw new Exception($"Can't process image {eCanProcess}");
+			throw new ProcessingException($"Can't process image {eCanProcess}");
 		}
 
 		using var image = Image.Load<PixelType>(ImageStream);
 
-		int ySize = (image.Height / image.Width) * asciiOptions.Size;
-		image.Mutate(i => i.Resize(asciiOptions.Size, asciiOptions.Size).Brightness(asciiOptions.Brightness));
+		image.Mutate(i => i
+			.Resize(asciiOptions.Size, 0)
+			.Brightness(asciiOptions.Brightness)
+		);
 
-		string imageAscii = "";
+		MemoryStream asciiStream = new();
 
-		int area = (image.Height) * (image.Width) - 1;
+		int area = image.Height * image.Width - 1;
 
 		for (int i = 0; i < area; i++)
 		{
 			string processed = ProcessPixel(image, i, pattern, asciiOptions);
-			imageAscii += processed;
+
+			byte[] proBytes = Encoding.UTF8.GetBytes(processed);
+			asciiStream.Write(proBytes);
 		}
 
-		return imageAscii;
+		return asciiStream;
 	}
 }

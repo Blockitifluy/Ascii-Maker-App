@@ -22,12 +22,16 @@ export async function UploadImage(blob: Blob): Promise<string> {
 export async function ConvertToAscii(
 	asciiParams: AsciiParams
 ): Promise<string> {
+	const params: Omit<AsciiParams, "ImageID"> = { ...asciiParams };
+	delete (params as any).ImageID;
+
 	const url = BaseURL + `api/convert-image-to-ascii?id=${asciiParams.ImageID}`;
 
 	const res = await fetch(url, {
 		method: "POST",
-		body: JSON.stringify(asciiParams)
+		body: JSON.stringify(params)
 	});
+
 	if (!res.ok) {
 		throw new Error(`Converting image wasn't ok: ${res.status}`);
 	}

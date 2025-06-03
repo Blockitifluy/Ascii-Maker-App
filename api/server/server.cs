@@ -30,7 +30,7 @@ public struct HandlerData(string path, string[] methods, UrlHandler urlHandler)
 	public UrlHandler UrlHandler = urlHandler;
 }
 
-public sealed partial class AsciiMakerServer
+public abstract class HTTPServer
 {
 	public int Port;
 	public HttpListener Listener = new();
@@ -98,12 +98,14 @@ public sealed partial class AsciiMakerServer
 			if (context == null)
 				return;
 
-			Task.Run(() => ProcessContext(context));
+			ProcessContext(context);
 		}
 
 		Listener.Close();
 		Console.WriteLine("\nEnded http server!");
 	}
+
+	const string ExtentionMaker = "/~";
 
 	/// <summary>
 	/// Trys to get the handler approprate for the request.
@@ -113,30 +115,34 @@ public sealed partial class AsciiMakerServer
 	/// <returns>Has a handler been found.</returns>
 	private bool TryGetRequestToHandler(HttpListenerRequest request, out HandlerData outHandler)
 	{
+		string url = request.Url.LocalPath;
+
 		foreach (HandlerData handler in UrlHandlers.Values)
 		{
-			string handlerURL = handler.Path,
-			url = request.Url.LocalPath;
+			// Case 1 - Extact match
+
+			string handlerURL = handler.Path;
 			int handleLength = handlerURL.Length;
 
-			// Cut the query parameters
-			int index = url.IndexOf('?');
-			if (index >= 0)
-				url = url[..index];
+			bool areURLsExact = handlerURL == url,
+			methodsMatch = handler.Method.Contains(request.HttpMethod);
 
-			if (handlerURL == url && handler.Method.Contains(request.HttpMethod))
+			if (areURLsExact && methodsMatch)
 			{
 				outHandler = handler;
 				return true;
 			}
 
-			// Remove extention marker
-			if (!handlerURL.EndsWith('~') || handleLength - 2 > url.Length) continue;
+			// Case 2 - Extention Maker
 
-			int cutLength = handleLength - 2;
+			int extentionIndex = handleLength - ExtentionMaker.Length;
 
-			string matchModURL = handlerURL[..cutLength];
-			string modURL = url[..cutLength];
+			bool endsInMaker = handlerURL.EndsWith('~'),
+			urlFits = extentionIndex > url.Length;
+			if (!endsInMaker || urlFits) continue;
+
+			string matchModURL = handlerURL[..extentionIndex],
+			modURL = url[..extentionIndex];
 
 			if (matchModURL == modURL)
 			{
@@ -182,22 +188,50 @@ public sealed partial class AsciiMakerServer
 
 	public static string ErrorMessage = "Error when processing request. Please try again later";
 
-	private void ProcessContext(HttpListenerContext context)
+	public bool IsRequestValid(HttpListenerRequest request, out int code)
+	{
+		string localPath = request.Url.LocalPath;
+
+		if (request.ContentLength64 > MaxRequestBodyLength)
+		{
+			code = (int)HttpStatusCode.RequestEntityTooLarge;
+			return false;
+		}
+		else if (localPath.LongCount() > MaxRequestBodyLength)
+		{
+			code = (int)HttpStatusCode.RequestUriTooLong;
+			return false;
+		}
+
+		code = 0;
+		return true;
+	}
+
+	private void OnContextException(HttpListenerResponse response, Exception ex, string localPath)
+	{
+		Console.ForegroundColor = ConsoleColor.Red;
+		Console.WriteLine($"\tServer has expierenced an error while handling request ({localPath}), see {Program.LogPath} more info!");
+		Console.ResetColor();
+
+		Program.LogSystem.Write(ex);
+
+		byte[] errorMsg = Encoding.UTF8.GetBytes(ErrorMessage);
+
+		response.ContentLength64 = errorMsg.Length;
+		response.StatusCode = (int)HttpStatusCode.InternalServerError;
+		response.OutputStream.Write(errorMsg, 0, errorMsg.Length);
+	}
+
+	public void ProcessContext(HttpListenerContext context)
 	{
 		HttpListenerResponse response = context.Response;
 		HttpListenerRequest request = context.Request;
 
 		string localPath = request.Url.LocalPath;
 
-		if (request.ContentLength64 > MaxRequestBodyLength)
+		if (!IsRequestValid(request, out var code))
 		{
-			response.StatusCode = (int)HttpStatusCode.RequestEntityTooLarge;
-			response.Close();
-			return;
-		}
-		else if (localPath.Length > MaxRequestBodyLength)
-		{
-			response.StatusCode = (int)HttpStatusCode.RequestUriTooLong;
+			response.StatusCode = code;
 			response.Close();
 			return;
 		}
@@ -207,41 +241,29 @@ public sealed partial class AsciiMakerServer
 
 		try
 		{
+			Console.ForegroundColor = ConsoleColor.Cyan;
+			Console.WriteLine($"> Handling request ({localPath})");
+			Console.ResetColor();
+
 			HandleURLRequest(context);
 		}
 		catch (Exception ex)
 		{
-			Console.ForegroundColor = ConsoleColor.Red;
-			Console.WriteLine($"\tServer has expierenced an error while handling request ({localPath}), see {Program.LogPath} more info!");
-			Console.ResetColor();
-
-			Program.LogSystem.Write(ex);
-
-			byte[] errorMsg = Encoding.UTF8.GetBytes(ErrorMessage);
-
-			response.ContentLength64 = errorMsg.Length;
-			response.StatusCode = (int)HttpStatusCode.InternalServerError;
-			response.OutputStream.Write(errorMsg, 0, errorMsg.Length);
-			response.Close();
+			OnContextException(response, ex, localPath);
 			return;
 		}
 		finally
 		{
 			timer.Stop();
-
-			Console.ForegroundColor = ConsoleColor.Cyan;
-			Console.WriteLine($"> Handled request ({localPath})");
-			Console.ResetColor();
 			Console.WriteLine($"\tRequest took {timer.ElapsedMilliseconds}ms");
+			response.Close();
 		}
 
 		Console.WriteLine($"\tStatus Code: {response.StatusCode}.");
 		Console.WriteLine($"\tContent Length: {response.ContentLength64}.");
-
-		response.Close();
 	}
 
-	public AsciiMakerServer(int port)
+	public HTTPServer(int port)
 	{
 		Port = port;
 

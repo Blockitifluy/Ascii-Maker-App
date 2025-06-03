@@ -93,7 +93,9 @@ const Inputs: Component = () => {
 
 	const copyResult = async () => {
 		try {
-			const ascii = await ConvertToAscii(asciiParams());
+			const params: AsciiParams = asciiParams();
+
+			const ascii = await ConvertToAscii(params);
 			SetFeedback({ IsError: false, Message: "Successfully copied" });
 			navigator.clipboard.writeText(ascii);
 		} catch (e) {

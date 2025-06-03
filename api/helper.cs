@@ -28,17 +28,16 @@ public static class Helper
 		return true;
 	}
 
-	public static byte[] Compress(byte[] input)
+	public static byte[] Compress(byte[] b)
 	{
-		using var result = new MemoryStream();
-
-		var lengthBytes = BitConverter.GetBytes(input.Length);
-		result.Write(lengthBytes);
-
-		using GZipStream gzipStream = new(result, CompressionMode.Compress);
-		;
-		gzipStream.Flush();
-		return result.ToArray();
+		using (MemoryStream ms = new())
+		{
+			using (GZipStream gzip = new(ms, CompressionMode.Compress, true))
+			{
+				gzip.Write(b, 0, b.Length);
+			}
+			return ms.ToArray();
+		}
 	}
 
 	public static T GetValueOrDefault<T>(this T[] array, int i, T @default = default)
