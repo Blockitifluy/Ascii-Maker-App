@@ -135,9 +135,8 @@ public static class ImageToAscii
 
 		MemoryStream asciiStream = new();
 
-		int area = image.Height * image.Width - 1;
-
-		for (int i = 0; i < area; i++)
+		int area = (image.Height - 1) * (image.Width - 1);
+		for (int i = 0; i <= area; i++)
 		{
 			string processed = ProcessPixel(image, i, pattern, asciiOptions);
 

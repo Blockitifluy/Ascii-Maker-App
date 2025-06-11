@@ -1,4 +1,4 @@
-namespace ImageToAscii.Helper;
+namespace ImageToAscii.HelperClasses;
 
 public class LogSystem(string logPath)
 {
@@ -11,6 +11,11 @@ public class LogSystem(string logPath)
 
 	public void Write(object send)
 	{
-		File.AppendAllText(LogPath, "\n" + send.ToString());
+		DateTime time = DateTime.Now;
+		string timeString = time.ToString();
+
+		string msg = $"[{timeString}] {send.ToString()}\n";
+
+		File.AppendAllText(LogPath, msg);
 	}
 }

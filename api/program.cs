@@ -1,7 +1,7 @@
 namespace ImageToAscii;
 
 using System.Text;
-using ImageToAscii.Helper;
+using ImageToAscii.HelperClasses;
 using ImageToAscii.Picture;
 using ImageToAscii.Server;
 
@@ -40,8 +40,8 @@ public static class Program
 	/// <summary>
 	/// The log file used for the server.
 	/// </summary>
-	private static AsciiMakerServer _HttpServer;
-	public static AsciiMakerServer HttpServer => _HttpServer;
+	private static AsciiServer _HttpServer;
+	public static AsciiServer HttpServer => _HttpServer;
 
 	public static string LogPath = "log/server.log";
 	private static LogSystem _LogSystem;
@@ -67,7 +67,7 @@ public static class Program
 				TestAscii();
 				break;
 			case "":
-				_HttpServer = new AsciiMakerServer(DefaultPort);
+				_HttpServer = new AsciiServer(DefaultPort);
 				Console.WriteLine($"> Initised http server on {DefaultPort}");
 				_HttpServer.Start();
 				break;

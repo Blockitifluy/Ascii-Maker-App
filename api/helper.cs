@@ -1,29 +1,31 @@
 using System.Collections.Specialized;
 using System.IO.Compression;
 using System.Net;
+using System.Numerics;
+using SixLabors.ImageSharp;
 
-namespace ImageToAscii.Helper;
+namespace ImageToAscii.HelperClasses;
 
 public static class Helper
 {
-	public static bool TryToGetIDFromURL(NameValueCollection query, out int code, out Guid guid)
+	public static bool TryToGetIDFromURL(NameValueCollection query, out HttpStatusCode code, out Guid guid)
 	{
 		string id = query.Get("id");
 		if (id == null)
 		{
-			code = (int)HttpStatusCode.BadRequest;
+			code = HttpStatusCode.BadRequest;
 			guid = Guid.Empty;
 			return false;
 		}
 
 		if (!Guid.TryParse(id, out var newGuid))
 		{
-			code = (int)HttpStatusCode.BadRequest;
+			code = HttpStatusCode.BadRequest;
 			guid = Guid.Empty;
 			return false;
 		}
 
-		code = (int)HttpStatusCode.OK;
+		code = HttpStatusCode.OK;
 		guid = newGuid;
 		return true;
 	}

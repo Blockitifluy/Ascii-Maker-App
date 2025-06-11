@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "eslint": "^9.28.0",
+    "eslint-plugin-solid": "^0.14.5"
+  }
+}

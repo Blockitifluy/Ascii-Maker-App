@@ -1,15 +1,42 @@
 using System.Diagnostics;
 using System.Net;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
+using ImageToAscii.HelperClasses;
 
 namespace ImageToAscii.Server;
 
-[AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
-public sealed class UrlHandlerAttribute(string urlPath, string[] methods) : Attribute
+public interface IHandler
 {
-	public readonly string UrlPath = urlPath;
-	public readonly string[] Methods = methods;
+	public HandlerFlags Flags { get; set; }
+	public string Path { get; set; }
+	public string[] Methods { get; set; }
+}
+
+[AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
+public sealed class UrlHandlerAttribute(string urlPath, string[] methods) : Attribute, IHandler
+{
+	public HandlerFlags Flags { get; set; } = HandlerFlags.None;
+	public string Path { get; set; } = urlPath;
+	public string[] Methods { get; set; } = methods;
+
+	public HandlerData ToStruct(UrlHandler handlerFunc)
+	{
+		return new()
+		{
+			Flags = Flags,
+			Methods = Methods,
+			Path = Path,
+			UrlHandler = handlerFunc
+		};
+	}
+}
+
+[Flags]
+public enum HandlerFlags : ulong
+{
+	None = 0,
 }
 
 /// <summary>
@@ -23,11 +50,13 @@ public delegate void UrlHandler(HttpListenerContext context);
 /// </summary>
 /// <param name="path">The local path of the URL handler.</param>
 /// <param name="urlHandler">The delegate that handles the URL request.</param>
-public struct HandlerData(string path, string[] methods, UrlHandler urlHandler)
+public struct HandlerData(string path, string[] methods, UrlHandler urlHandler) : IHandler
 {
-	public string Path = path;
-	public string[] Method = methods;
-	public UrlHandler UrlHandler = urlHandler;
+	public HandlerFlags Flags { get; set; } = HandlerFlags.None;
+	public string Path { get; set; } = path;
+	public string[] Methods { get; set; } = methods;
+
+	public UrlHandler UrlHandler { get; set; } = urlHandler;
 }
 
 public abstract class HTTPServer
@@ -61,8 +90,8 @@ public abstract class HTTPServer
 
 				foreach (var handlerAtt in handlerAttributes)
 				{
-					HandlerData data = new(handlerAtt.UrlPath, handlerAtt.Methods, handler);
-					UrlHandlers.Add(handlerAtt.UrlPath, data);
+					HandlerData data = handlerAtt.ToStruct(handler);
+					UrlHandlers.Add(handlerAtt.Path, data);
 				}
 			}
 		}
@@ -96,7 +125,9 @@ public abstract class HTTPServer
 			HttpListenerContext context = Listener.GetContext();
 
 			if (context == null)
-				return;
+			{
+				continue;
+			}
 
 			ProcessContext(context);
 		}
@@ -105,7 +136,7 @@ public abstract class HTTPServer
 		Console.WriteLine("\nEnded http server!");
 	}
 
-	const string ExtentionMaker = "/~";
+	public const string ExtentionMaker = "/~";
 
 	/// <summary>
 	/// Trys to get the handler approprate for the request.
@@ -125,7 +156,7 @@ public abstract class HTTPServer
 			int handleLength = handlerURL.Length;
 
 			bool areURLsExact = handlerURL == url,
-			methodsMatch = handler.Method.Contains(request.HttpMethod);
+			methodsMatch = handler.Methods.Contains(request.HttpMethod);
 
 			if (areURLsExact && methodsMatch)
 			{
@@ -173,6 +204,7 @@ public abstract class HTTPServer
 
 			response.StatusCode = (int)HttpStatusCode.NotFound;
 			response.ContentType = "text/plain";
+			response.ContentLength64 = notFound.Length;
 			response.OutputStream.Write(notFound, 0, notFound.Length);
 			return;
 		}
@@ -188,6 +220,12 @@ public abstract class HTTPServer
 
 	public static string ErrorMessage = "Error when processing request. Please try again later";
 
+	/// <summary>
+	/// Checks if a function is valid, from it's length
+	/// </summary>
+	/// <param name="request">HTTP Request</param>
+	/// <param name="code">HTTP code, 0 if accepted.</param>
+	/// <returns>Is the request valid?</returns>
 	public bool IsRequestValid(HttpListenerRequest request, out int code)
 	{
 		string localPath = request.Url.LocalPath;
@@ -222,7 +260,7 @@ public abstract class HTTPServer
 		response.OutputStream.Write(errorMsg, 0, errorMsg.Length);
 	}
 
-	public void ProcessContext(HttpListenerContext context)
+	private void ProcessContext(HttpListenerContext context)
 	{
 		HttpListenerResponse response = context.Response;
 		HttpListenerRequest request = context.Request;
@@ -242,7 +280,7 @@ public abstract class HTTPServer
 		try
 		{
 			Console.ForegroundColor = ConsoleColor.Cyan;
-			Console.WriteLine($"> Handling request ({localPath})");
+			Console.WriteLine($"Recieved request ({localPath})");
 			Console.ResetColor();
 
 			HandleURLRequest(context);
@@ -269,6 +307,8 @@ public abstract class HTTPServer
 
 		Listener.Prefixes.Add($"http://127.0.0.1:{port}/");
 		Listener.Prefixes.Add($"http://localhost:{port}/");
+
+		Program.LogSystem.Write("Loading HTTP server");
 
 		LoadUrlHandlers();
 	}
